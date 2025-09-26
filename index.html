@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HA-cast</title>
+  <style>
+    :root { --bg:#0b0c0f; --fg:#e9edf1; --muted:#9aa4af; --card:#151821; --accent:#4da3ff; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7fb; --fg:#0b0c0f; --muted:#5b6470; --card:#ffffff; --accent:#246bff; }
+    }
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:16px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .wrap{max-width:900px;margin:0 auto;padding:16px 14px 40px}
+    header{margin:6px 0 16px}
+    h1{font-size:28px;margin:0 0 6px}
+    .sub{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:14px}
+    .card{background:var(--card);border-radius:14px;padding:14px 12px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+    .t{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .v{font-size:26px;font-weight:600}
+    .u{font-size:14px;color:var(--muted);margin-left:6px}
+    .badge{display:inline-block;background:var(--accent);color:white;padding:4px 10px;border-radius:999px;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="site_title">HA-cast</h1>
+      <div class="sub">Sidst opdateret: <span id="updated">—</span></div>
+    </header>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+    const GIST_RAW_URL = "https://gist.githubusercontent.com/Siffo73/912e4efac61a6b90581790d3ce86b0fb/raw/data.json";
+
+    async function load() {
+      try {
+        const res = await fetch(GIST_RAW_URL, {cache:"no-store"});
+        const data = await res.json();
+
+        document.getElementById("site_title").textContent = data.site_title || "HA-cast";
+        document.getElementById("updated").textContent = new Date(data.updated || Date.now()).toLocaleString();
+
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+
+        (data.tiles || []).forEach(tile => {
+          const card = document.createElement("div");
+          card.className = "card";
+          const title = document.createElement("div");
+          title.className = "t";
+          title.textContent = tile.title || "";
+
+          let body = "";
+          if (tile.type === "badge") {
+            body = `<span class="badge">${(tile.value ?? "").toString()}</span>`;
+          } else if (tile.type === "media") {
+            body = `
+              <div class="v">${(tile.state ?? "").toString()}</div>
+              <div class="sub">${(tile.title_now || "")} ${(tile.artist_now ? " – " + tile.artist_now : "")}</div>
+              <div class="sub">Vol: ${tile.volume ?? 0}%</div>`;
+          } else {
+            body = `<span class="v">${(tile.value ?? "—")}</span><span class="u">${tile.unit || ""}</span>`;
+          }
+
+          card.innerHTML = title.outerHTML + body;
+          grid.appendChild(card);
+        });
+      } catch (e) {
+        document.getElementById("grid").innerHTML =
+          `<div class="card"><div class="t">Fejl</div><div class="sub">${e}</div></div>`;
+      }
+    }
+
+    load();
+    // auto-refresh hvert minut
+    setInterval(load, 60_000);
+  </script>
+</body>
+</html>
